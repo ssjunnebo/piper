@@ -1,18 +1,10 @@
 package molmed.utils
 
-import org.broadinstitute.gatk.queue.extensions.gatk.UnifiedGenotyper
 import java.io.File
-import org.broadinstitute.gatk.queue.extensions.gatk.VariantFiltration
-import org.broadinstitute.gatk.queue.extensions.gatk.VariantRecalibrator
-import org.broadinstitute.gatk.queue.extensions.gatk.TaggedFile
-import org.broadinstitute.gatk.queue.extensions.gatk.ApplyRecalibration
-import org.broadinstitute.gatk.queue.extensions.gatk.VariantEval
-import org.broadinstitute.gatk.queue.QScript
-import org.broadinstitute.gatk.queue.extensions.gatk.HaplotypeCaller
-import org.broadinstitute.gatk.queue.extensions.gatk.GenotypeGVCFs
-import org.broadinstitute.gatk.queue.extensions.gatk.SelectVariants
-import org.broadinstitute.gatk.queue.extensions.gatk.GenotypeConcordance
+
+import org.broadinstitute.gatk.queue.extensions.gatk._
 import org.broadinstitute.gatk.queue.function.CommandLineFunction
+import org.broadinstitute.gatk.utils.variant.GATKVariantContextUtils.{FilteredRecordMergeType, GenotypeMergeType}
 
 /**
  * Wrapping case classed and functions for doing variant calling using the GATK.
@@ -28,7 +20,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         bam.getName,
         gatkOptions.reference,
         Seq(bam),
-        gatkOptions.intervalFile,
+        // set the genotype vcf file as interval file to restrict calling to those regions
+        gatkOptions.snpGenotypingVcf,
         config.isLowPass, config.isExome, 1,
         snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
         skipVcfCompression = config.skipVcfCompression))
@@ -372,6 +365,17 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         this.out = t.rawIndelVCF
       }
     }
+  }
+
+  case class CombineVariantFiles(variantFiles: Seq[File], outputFile: File) extends CombineVariants with CommandLineGATKArgs with FourCoreJob {
+
+    this.reference_sequence = gatkOptions.reference
+    this.variant = variantFiles.map(variantFile => TaggedFile(variantFile, variantFile.getName))
+    this.out = outputFile
+    this.genotypemergeoption = GenotypeMergeType.PRIORITIZE
+    this.filteredrecordsmergetype = FilteredRecordMergeType.KEEP_UNCONDITIONAL
+    this.rod_priority_list = variantFiles.map( _.getName ).mkString(sep = ",")
+
   }
 
   // 1.) Unified Genotyper Base
