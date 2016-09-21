@@ -398,7 +398,7 @@ class DNABestPracticeVariantCalling extends QScript
    * Variant calling
    */
   def runVariantCalling(
-    bamTargets: Seq[GATKProcessingTarget],
+    bams: Seq[File],
     outputDirectory: File,
     gatkOptions: GATKConfig,
     uppmaxConfig: UppmaxConfig): Seq[File] = {
@@ -415,7 +415,7 @@ class DNABestPracticeVariantCalling extends QScript
     val variantCallingConfig = new VariantCallingConfig(
       qscript = this,
       variantCaller = variantCallerToUse,
-      bamTargets,
+      bams,
       outputDirectory,
       runSeparatly,
       isLowPass,
@@ -573,7 +573,7 @@ class DNABestPracticeVariantCalling extends QScript
         gatkOptions, generalUtils, uppmaxConfig, reference)
 
     val variantCalling = runVariantCalling(
-      _: Seq[GATKProcessingTarget], variantCallsOutputDir,
+      _: Seq[File], variantCallsOutputDir,
       gatkOptions, uppmaxConfig)
 
     /**
@@ -618,7 +618,7 @@ class DNABestPracticeVariantCalling extends QScript
         val mergedBams = mergedAlignments(aligments)
         val processedBamTargets = dataProcessing(mergedBams)
         qualityControl(processedBamTargets.map( _.processedBam.file ), finalAlignmentQCOutputDir)
-        variantCalling(processedBamTargets)
+        variantCalling(processedBamTargets.map( _.recalBam.file ))
       }
       case e if e.contains(AnalysisSteps.GenerateDelivery) => {
 
@@ -632,7 +632,7 @@ class DNABestPracticeVariantCalling extends QScript
         val mergedBams = mergedAlignments(aligments)
         val processedBamTargets = dataProcessing(mergedBams)
         val finalQC = qualityControl(processedBamTargets.map( _.processedBam.file ), finalAlignmentQCOutputDir)
-        val variantCallFiles = variantCalling(processedBamTargets)
+        val variantCallFiles = variantCalling(processedBamTargets.map( _.recalBam.file ))
 
         runCreateDelivery(
           fastqs,

@@ -75,17 +75,11 @@ class AlignmentQCUtils(
     skipVcfCompression: Boolean): Seq[File] = {
 
     val gatkOptionsWithGenotypingSnp = gatkOptions.copy(snpGenotypingVcf = Some(comparisonVcf))
-    val bamTargets = bamFiles.map( bamFile => new GATKProcessingTarget(
-          bamFile.getParentFile(),
-          bamFile,
-          skipDeduplication = false,
-          keepPreBQSRBam = false,
-          gatkOptions.intervalFile) )
     val variantCallingUtils = new VariantCallingUtils(gatkOptionsWithGenotypingSnp, projectName, uppmaxConfig)
     val variantCallingConfig = new VariantCallingConfig(
       qscript = qscript,
       variantCaller = Some(GATKUnifiedGenotyper),
-      bamTargets = bamTargets,
+      bams = bamFiles,
       outputDir = outputBase,
       runSeparatly = true,
       isLowPass = isLowPass,

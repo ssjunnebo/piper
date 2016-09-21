@@ -121,14 +121,12 @@ class VariantCalling extends QScript with UppmaxXMLConfiguration {
     val variantCallingUtils = new VariantCallingUtils(gatkOptions, projectName, uppmaxConfig)
 
     val intervalOption = if(intervals == null) None else Some(intervals) 
-    
-    val bamTargets = bams.map( bam => new GATKProcessingTarget(outputDir, bam, skipDeduplication = false, gatkOptions.keepPreBQSRBam, intervalOption) )
-    
+
     val targets = (runSeparatly, notHuman) match {
-      case (true, false) => bamTargets.map(bamTarget => new VariantCallingTarget(outputDir, bamTarget.bam.getName(), reference, Seq(bamTarget), intervalOption, isLowpass, isExome, 1))
-      case (true, true) => bamTargets.map(bamTarget => new VariantCallingTarget(outputDir, bamTarget.bam.getName(), reference, Seq(bamTarget), intervalOption, isLowpass, false, 1))
-      case (false, true) => Seq(new VariantCallingTarget(outputDir, projectName.get, reference, bamTargets, intervalOption, isLowpass, false, bams.size))
-      case (false, false) => Seq(new VariantCallingTarget(outputDir, projectName.get, reference, bamTargets, intervalOption, isLowpass, isExome, bams.size))
+      case (true, false) => bams.map(bam => new VariantCallingTarget(outputDir, bam.getName, reference, Seq(bam), intervalOption, isLowpass, isExome, 1))
+      case (true, true) => bams.map(bam => new VariantCallingTarget(outputDir, bam.getName, reference, Seq(bam), intervalOption, isLowpass, false, 1))
+      case (false, true) => Seq(new VariantCallingTarget(outputDir, projectName.get, reference, bams, intervalOption, isLowpass, false, bams.size))
+      case (false, false) => Seq(new VariantCallingTarget(outputDir, projectName.get, reference, bams, intervalOption, isLowpass, isExome, bams.size))
     }
 
     for (target <- targets) {
