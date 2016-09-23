@@ -38,7 +38,7 @@ class GenotypeConcordance  extends QScript {
   var nbrOfThreads: Int = 1
 
   @Argument(doc = "File containing license key for disabling GATK phone home feature", fullName = "gatk_key", shortName = "gatkKey", required = false)
-  var gatkKey: File = _
+  var gatkKey: Option[File] = _
 
   /**
     * **************************************************************************
@@ -49,7 +49,7 @@ class GenotypeConcordance  extends QScript {
   def script() {
 
     val gatkOptions =
-      GATKConfig(reference, nbrOfThreads, 1, None, None, None, gatkKey = Some(gatkKey))
+      GATKConfig(reference, nbrOfThreads, 1, None, None, None, gatkKey = gatkKey)
     val variantCallingUtils = new VariantCallingUtils(gatkOptions, projectName = Some(UppmaxConfig.defaultProjectId), UppmaxConfig())
 
     // combine the comp files into one vcf
