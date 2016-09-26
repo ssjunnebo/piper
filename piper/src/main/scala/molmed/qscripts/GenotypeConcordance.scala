@@ -28,7 +28,7 @@ class GenotypeConcordance  extends QScript {
   @Input(doc = "one or more files with variant calls to be checked against the genotypes - the eval set", fullName = "variantcalls", shortName = "vc", required = true)
   var variantCalls: Seq[File] = Nil
 
-  @Output(doc = "directory where all output will be written", fullName = "outputdir", shortName = "out", required = false)
+  @Argument(doc = "directory where all output will be written", fullName = "outputdir", shortName = "out", required = false)
   var outputDir: String = "genotype_concordance"
 
   @Input(doc = "genome reference file in fasta format", fullName = "reference", shortName = "ref", required = true)
@@ -38,7 +38,7 @@ class GenotypeConcordance  extends QScript {
   var nbrOfThreads: Int = 1
 
   @Argument(doc = "File containing license key for disabling GATK phone home feature", fullName = "gatk_key", shortName = "gatkKey", required = false)
-  var gatkKey: Option[File] = _
+  var gatkKey: File = _
 
   /**
     * **************************************************************************
@@ -49,7 +49,7 @@ class GenotypeConcordance  extends QScript {
   def script() {
 
     val gatkOptions =
-      GATKConfig(reference, nbrOfThreads, 1, None, None, None, gatkKey = gatkKey)
+      GATKConfig(reference, nbrOfThreads, 1, None, None, None, gatkKey = Option(gatkKey))
     val variantCallingUtils = new VariantCallingUtils(gatkOptions, projectName = Some(UppmaxConfig.defaultProjectId), UppmaxConfig())
 
     // combine the comp files into one vcf
