@@ -1,18 +1,12 @@
 package molmed.utils
 
-import org.broadinstitute.gatk.queue.extensions.gatk.UnifiedGenotyper
 import java.io.File
-import org.broadinstitute.gatk.queue.extensions.gatk.VariantFiltration
-import org.broadinstitute.gatk.queue.extensions.gatk.VariantRecalibrator
-import org.broadinstitute.gatk.queue.extensions.gatk.TaggedFile
-import org.broadinstitute.gatk.queue.extensions.gatk.ApplyRecalibration
-import org.broadinstitute.gatk.queue.extensions.gatk.VariantEval
+import java.nio.file.{Files, StandardCopyOption}
+
 import org.broadinstitute.gatk.queue.QScript
-import org.broadinstitute.gatk.queue.extensions.gatk.HaplotypeCaller
-import org.broadinstitute.gatk.queue.extensions.gatk.GenotypeGVCFs
-import org.broadinstitute.gatk.queue.extensions.gatk.SelectVariants
-import org.broadinstitute.gatk.queue.extensions.gatk.GenotypeConcordance
+import org.broadinstitute.gatk.queue.extensions.gatk._
 import org.broadinstitute.gatk.queue.function.CommandLineFunction
+import org.broadinstitute.gatk.utils.variant.GATKVariantContextUtils.{FilteredRecordMergeType, GenotypeMergeType}
 
 /**
  * Wrapping case classed and functions for doing variant calling using the GATK.
@@ -28,7 +22,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         bam.getName,
         gatkOptions.reference,
         Seq(bam),
-        gatkOptions.intervalFile,
+        // set the genotype vcf file as interval file to restrict calling to those regions
+        gatkOptions.snpGenotypingVcf,
         config.isLowPass, config.isExome, 1,
         snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
         skipVcfCompression = config.skipVcfCompression))
@@ -49,6 +44,27 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
 
       target.genotypeConcordance
     }
+
+  }
+
+  def indexVcf(config: VariantCallingConfig, vcfToIndex: File): File = {
+    indexVcf(config.qscript, vcfToIndex, config.bcftoolsPath.get)
+  }
+
+  def indexVcf(qscript: QScript, vcfToIndex: File, bcftoolsPath: File): File = {
+    val outputIndex = new File(vcfToIndex.getPath + ".tbi")
+    qscript.add(IndexVCF(vcfToIndex, outputIndex, bcftoolsPath))
+    outputIndex
+  }
+
+  def combineVcfFiles(config: VariantCallingConfig, vcfsToCombine: Seq[File], outputFile: File): File = {
+
+    // make sure to create indexes for all vcfs
+    val vcfIndexFiles: Seq[File] = vcfsToCombine.map(f => indexVcf(config, f))
+    val combinedFile = new File(config.outputDir.getPath + outputFile.getName)
+    config.qscript.add(CombineVariantFiles(vcfsToCombine, vcfIndexFiles, combinedFile))
+    indexVcf(config, combinedFile)
+    combinedFile
 
   }
 
@@ -374,6 +390,36 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
     }
   }
 
+  case class IndexVCF(@Input vcfToIndex: File, @Output indexFile: File, @Argument bcftoolsPath: File) extends OneCoreJob {
+    val defaultOutput = new File(vcfToIndex.getPath + ".tbi")
+    override def commandLine =
+      required(bcftoolsPath) + required("index") + required("-t") + required("-f") + required(vcfToIndex)
+    if (!indexFile.equals(defaultOutput)) {
+      Files.move(defaultOutput.toPath, indexFile.toPath, StandardCopyOption.ATOMIC_MOVE)
+    }
+  }
+
+  case class CombineVariantFiles(variantFiles: Seq[File], @Input variantIndexFiles: Seq[File], outputFile: File) extends CombineVariants with CommandLineGATKArgs with FourCoreJob {
+
+    this.variant = variantFiles.map(variantFile => TaggedFile(variantFile, variantFile.getName))
+    this.out = outputFile
+    this.genotypemergeoption = GenotypeMergeType.PRIORITIZE
+    this.filteredrecordsmergetype = FilteredRecordMergeType.KEEP_UNCONDITIONAL
+    this.rod_priority_list = variantFiles.map( _.getName ).mkString(sep = ",")
+    this.variant_index_type = org.broadinstitute.gatk.utils.variant.GATKVCFIndexType.DYNAMIC_SEEK
+
+  }
+
+  case class ValidateVariantVCFs(variantFile: File) extends ValidateVariants with CommandLineGATKArgs with OneCoreJob {
+
+    this.variant = variantFile
+    this.warnOnErrors = true
+    this.validationTypeToExclude = Seq(org.broadinstitute.gatk.tools.walkers.variantutils.ValidateVariants.ValidationType.ALL)
+    this.variant_index_type = org.broadinstitute.gatk.utils.variant.GATKVCFIndexType.DYNAMIC_SEEK
+    this.log_to_file = new File(variantFile.getCanonicalPath.split(".vcf*").head + ".vcf.validate.log")
+
+  }
+
   // 1.) Unified Genotyper Base
   class UnifiedGenotyperBase(t: VariantCallingTarget, testMode: Boolean, downsampleFraction: Option[Double])
       extends UnifiedGenotyper with CommandLineGATKArgs with EightCoreJob {
@@ -598,6 +644,9 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
     this.comp = TaggedFile(t.snpGenotypingVcf.get, "chip_genotypes")
     this.out = t.genotypeConcordance
   }
+
+  // extending the SNPGenotypeConcordance to explicitly require a VCF index as input
+  case class GenotypeConcordanceWithIndex(t: VariantCallingTarget, @Input rawSnpVcfIndex: File) extends SNPGenotypeConcordance(t)
 
   case class SnpEff(@Input input: File, @Output output: File, config: VariantCallingConfig) extends CommandLineFunction with TwoCoreJob {
 
