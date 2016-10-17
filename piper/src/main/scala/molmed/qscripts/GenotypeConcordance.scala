@@ -6,10 +6,6 @@ import molmed.utils.VariantCallingUtils
 import molmed.utils.VariantCallingConfig
 import org.broadinstitute.gatk.queue.QScript
 
-/**
-  * Created by vagrant on 2016-09-21.
-  */
-
 class GenotypeConcordance  extends QScript with FileAndProgramResourceConfig {
 
   /**
