@@ -184,7 +184,7 @@ Piper is a pipeline system developed and maintained at the National Genomics Inf
 README
 ******
 
-Data has been aligned to the reference using bwa. The raw alignments have then been deduplicated, recalibrated and indel realigned using GATK. For deduplication PicardMarkDuplicates, available in the Picard version that is bundled with the current version of gatk, has been used. Quality control information was gathered using Qualimap. SNVs and indels have been called using the HaplotypeCaller. These variants were then functionally annotated using snpEff. The pipeline used was Piper, see below for more information.
+Data has been aligned to the reference using bwa. The raw alignments have then been deduplicated, recalibrated and indel realigned using GATK. For deduplication PicardMarkDuplicates, available in the Picard version that is bundled with the current version of GATK, has been used. Quality control information was gathered using Qualimap. SNVs and indels have been called using the GATK HaplotypeCaller. These variants were then functionally annotated using snpEff. The pipeline used was Piper, see below for more information.
 
 The versions of programs and references used:
 piper: $piperVersion
