@@ -105,20 +105,22 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
     // Evaluate the raw variants (both SNVs and INDELS)
     config.qscript.add(new CombinedEvaluation(target))
 
-    config.qscript.add(new SelectVariantType(target, SNPs, config.testMode))
-    config.qscript.add(new SelectVariantType(target, INDELs, config.testMode))
-
-    // Perform recalibration      
+    // Perform recalibration
     if (!config.noRecal) {
+
+      // Separate SNPs and INDELs and recalibrate and evaluate them individually
+      config.qscript.add(new SelectVariantType(target, SNPs, config.testMode))
+      config.qscript.add(new SelectVariantType(target, INDELs, config.testMode))
+
       config.qscript.add(new SnpRecalibration(target))
       config.qscript.add(new SnpCut(target))
 
       config.qscript.add(new IndelRecalibration(target))
       config.qscript.add(new IndelCut(target))
-    }
 
-    config.qscript.add(new SnpEvaluation(target, config.noRecal))
-    config.qscript.add(new IndelEvaluation(target, config.noRecal))
+      config.qscript.add(new SnpEvaluation(target, config.noRecal))
+      config.qscript.add(new IndelEvaluation(target, config.noRecal))
+    }
 
     if (!config.noRecal) {
       Seq(

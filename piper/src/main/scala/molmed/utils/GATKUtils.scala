@@ -56,7 +56,7 @@ class GATKUtils(gatkOptions: GATKConfig, projectName: Option[String], uppmaxConf
 
   case class clean(inBams: Seq[File], tIntervals: File, outBam: File,
                    @Argument cleanModelEnum: ConsensusDeterminationModel,
-                   testMode: Boolean, asIntermediate: Boolean = true) extends IndelRealigner with CommandLineGATKArgs with OneCoreJob {
+                   testMode: Boolean, asIntermediate: Boolean = true) extends IndelRealigner with CommandLineGATKArgs with TwoCoreJob {
 
     this.isIntermediate = asIntermediate
 
