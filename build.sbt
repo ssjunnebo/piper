@@ -16,7 +16,7 @@ name in Global := "Piper"
 organization := "molmed"
 
 scalaVersion in Global := "2.10.3"
-scalacOptions in Compile ++= Seq("-deprecation","-unchecked")
+scalacOptions in Compile ++= Seq("-deprecation","-unchecked", "-target:jvm-1.7")
 
 val gatkVersionHash = "eee94ec81f721044557f590c62aeea6880afd927"
 
